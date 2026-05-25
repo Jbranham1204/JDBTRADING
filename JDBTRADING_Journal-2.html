@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JDBTRADING — Trade Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080b0f;
+    --surface:  #0e1318;
+    --card:     #131920;
+    --border:   #1e2a35;
+    --green:    #00e676;
+    --green2:   #00c853;
+    --red:      #ff1744;
+    --gold:     #ffd700;
+    --muted:    #4a5568;
+    --text:     #e2e8f0;
+    --subtext:  #718096;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,230,118,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,230,118,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(8,11,15,0.95);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--green);
+    letter-spacing: 2px;
+  }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--subtext);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-cell {
+    background: var(--surface);
+    padding: 16px 24px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--subtext);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.red   { color: var(--red); }
+  .stat-value.gold  { color: var(--gold); }
+  .stat-value.white { color: var(--text); }
+
+  /* Win rate bar */
+  .wr-bar-wrap {
+    margin-top: 6px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .wr-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green2), var(--green));
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 140px);
+  }
+
+  /* ── LEFT PANEL — ADD TRADE ── */
+  .add-panel {
+    border-right: 1px solid var(--border);
+    padding: 28px 24px;
+    background: var(--surface);
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
+    position: sticky;
+    top: 140px;
+  }
+
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Form */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--subtext);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--green);
+  }
+
+  select option { background: var(--card); }
+
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* Direction toggle */
+  .direction-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .dir-btn {
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 1px;
+    background: var(--card);
+    color: var(--subtext);
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .dir-btn.long.active  { background: rgba(0,230,118,0.15); color: var(--green); }
+  .dir-btn.short.active { background: rgba(255,23,68,0.15);  color: var(--red); }
+  .dir-btn:hover { filter: brightness(1.2); }
+
+  /* Result toggle */
+  .result-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .res-btn {
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 1px;
+    background: var(--card);
+    color: var(--subtext);
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .res-btn.win.active  { background: rgba(0,230,118,0.15); color: var(--green); }
+  .res-btn.loss.active { background: rgba(255,23,68,0.15);  color: var(--red); }
+  .res-btn.be.active   { background: rgba(255,215,0,0.15);  color: var(--gold); }
+
+  /* Image upload */
+  .img-upload {
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .img-upload:hover { border-color: var(--green); }
+  .img-upload input[type="file"] { display: none; }
+
+  .img-upload-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--subtext);
+    letter-spacing: 1px;
+  }
+
+  .img-preview {
+    display: none;
+    width: 100%;
+    max-height: 140px;
+    object-fit: cover;
+    border-radius: 3px;
+    margin-top: 8px;
+  }
+
+  /* Submit button */
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--green2), var(--green));
+    border: none;
+    border-radius: 4px;
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+
+  .submit-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); }
+
+  /* ── RIGHT PANEL — TRADE LIST ── */
+  .trades-panel {
+    padding: 28px 28px;
+    overflow-y: auto;
+  }
+
+  .trades-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .trades-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--gold);
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--subtext);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active { border-color: var(--green); color: var(--green); background: rgba(0,230,118,0.08); }
+  .filter-btn:hover  { border-color: var(--muted); color: var(--text); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--subtext);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* ── TRADE CARD ── */
+  .trade-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .trade-card:hover { border-color: var(--muted); }
+  .trade-card.win   { border-left: 3px solid var(--green); }
+  .trade-card.loss  { border-left: 3px solid var(--red); }
+  .trade-card.be    { border-left: 3px solid var(--gold); }
+
+  .card-top {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    cursor: pointer;
+  }
+
+  .card-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 3px;
+  }
+
+  .card-badge.long  { background: rgba(0,230,118,0.12); color: var(--green); }
+  .card-badge.short { background: rgba(255,23,68,0.12);  color: var(--red); }
+
+  .card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .card-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--subtext);
+  }
+
+  .card-instrument {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .card-pnl {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 1px;
+    text-align: right;
+  }
+
+  .card-pnl.win  { color: var(--green); }
+  .card-pnl.loss { color: var(--red); }
+  .card-pnl.be   { color: var(--gold); }
+
+  .card-result {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  .card-result.win  { background: rgba(0,230,118,0.12); color: var(--green); }
+  .card-result.loss { background: rgba(255,23,68,0.12);  color: var(--red); }
+  .card-result.be   { background: rgba(255,215,0,0.12);  color: var(--gold); }
+
+  /* Expandable detail */
+  .card-detail {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .card-detail.open { display: block; }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .detail-item label {
+    font-size: 8px;
+    letter-spacing: 2px;
+    margin-bottom: 3px;
+  }
+
+  .detail-item .val {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .trade-image {
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .trade-image:hover { opacity: 0.9; }
+
+  .trade-notes {
+    font-size: 13px;
+    color: var(--subtext);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 6px 12px;
+    background: rgba(255,23,68,0.08);
+    border: 1px solid rgba(255,23,68,0.2);
+    border-radius: 3px;
+    color: var(--red);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .delete-btn:hover { background: rgba(255,23,68,0.15); }
+
+  /* Image lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lightbox.open { display: flex; }
+
+  .lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    font-size: 32px;
+    color: var(--subtext);
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: color 0.2s;
+  }
+
+  .lightbox-close:hover { color: var(--text); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+    .add-panel { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-main">JDBTRADING</span>
+    <span class="logo-sub">7AM ORB · Trade Journal</span>
+  </div>
+  <div class="header-right">
+    <span id="tradeCount" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--subtext);">0 trades logged</span>
+  </div>
+</header>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-cell">
+    <div class="stat-label">Win Rate</div>
+    <div class="stat-value green" id="statWR">0%</div>
+    <div class="wr-bar-wrap"><div class="wr-bar-fill" id="wrBar" style="width:0%"></div></div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Total Trades</div>
+    <div class="stat-value white" id="statTotal">0</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Wins / Losses</div>
+    <div class="stat-value" id="statWL" style="color:var(--text);font-size:22px;">0 / 0</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Net P&L</div>
+    <div class="stat-value white" id="statPnL">$0.00</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">Streak</div>
+    <div class="stat-value gold" id="statStreak">—</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: ADD TRADE -->
+  <div class="add-panel">
+    <div class="panel-title">Log Trade</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="form-group">
+        <label>Time (CT)</label>
+        <input type="time" id="fTime">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Instrument</label>
+      <select id="fInstrument">
+        <option value="NQ">NQ — Nasdaq Futures</option>
+        <option value="MNQ">MNQ — Micro Nasdaq</option>
+        <option value="ES">ES — S&P 500 Futures</option>
+        <option value="MES">MES — Micro S&P</option>
+        <option value="YM">YM — Dow Futures</option>
+        <option value="MYM">MYM — Micro Dow</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Direction</label>
+      <div class="direction-toggle">
+        <button class="dir-btn long active" onclick="setDir('long')">▲ LONG</button>
+        <button class="dir-btn short" onclick="setDir('short')">▼ SHORT</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Entry Price</label>
+        <input type="number" id="fEntry" placeholder="0.00" step="0.25">
+      </div>
+      <div class="form-group">
+        <label>Exit Price</label>
+        <input type="number" id="fExit" placeholder="0.00" step="0.25">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Stop Loss</label>
+        <input type="number" id="fStop" placeholder="0.00" step="0.25">
+      </div>
+      <div class="form-group">
+        <label>P&L ($)</label>
+        <input type="number" id="fPnL" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Result</label>
+      <div class="result-toggle">
+        <button class="res-btn win active" onclick="setResult('win')">WIN</button>
+        <button class="res-btn loss" onclick="setResult('loss')">LOSS</button>
+        <button class="res-btn be" onclick="setResult('be')">BREAK EVEN</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Setup Quality</label>
+      <select id="fQuality">
+        <option value="A">A+ — Perfect setup, all rules met</option>
+        <option value="B">B — Good setup, minor hesitation</option>
+        <option value="C">C — Okay setup, forced entry</option>
+        <option value="skip">SKIP DAY — Box too wide/narrow</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Chart Screenshot</label>
+      <div class="img-upload" onclick="document.getElementById('fImg').click()">
+        <div class="img-upload-text">📸 TAP TO UPLOAD CHART</div>
+        <input type="file" id="fImg" accept="image/*" onchange="previewImg(this)">
+        <img class="img-preview" id="imgPreview" src="" alt="">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Notes / Reason</label>
+      <textarea id="fNotes" placeholder="What did you see? Why did you take it? What happened?"></textarea>
+    </div>
+
+    <button class="submit-btn" onclick="addTrade()">+ LOG TRADE</button>
+  </div>
+
+  <!-- RIGHT: TRADE LIST -->
+  <div class="trades-panel">
+    <div class="trades-header">
+      <div class="trades-title">Trade History</div>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="setFilter('all', this)">ALL</button>
+        <button class="filter-btn" onclick="setFilter('win', this)">WINS</button>
+        <button class="filter-btn" onclick="setFilter('loss', this)">LOSSES</button>
+        <button class="filter-btn" onclick="setFilter('long', this)">LONGS</button>
+        <button class="filter-btn" onclick="setFilter('short', this)">SHORTS</button>
+      </div>
+    </div>
+
+    <div id="tradeList">
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">No trades logged yet.<br>Add your first trade on the left.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div class="lightbox-close">✕</div>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+  // ── STATE ──
+  let trades    = JSON.parse(localStorage.getItem('rp_trades') || '[]');
+  let direction = 'long';
+  let result    = 'win';
+  let filter    = 'all';
+
+  // ── INIT ──
+  const today = new Date();
+  document.getElementById('fDate').value = today.toISOString().split('T')[0];
+  document.getElementById('fTime').value = '07:15';
+  renderAll();
+
+  // ── DIRECTION / RESULT TOGGLES ──
+  function setDir(d) {
+    direction = d;
+    document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.dir-btn.' + d).classList.add('active');
+  }
+
+  function setResult(r) {
+    result = r;
+    document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.res-btn.' + r).classList.add('active');
+  }
+
+  // ── IMAGE PREVIEW ──
+  function previewImg(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('imgPreview');
+      prev.src   = e.target.result;
+      prev.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  // ── ADD TRADE ──
+  function addTrade() {
+    const date   = document.getElementById('fDate').value;
+    const time   = document.getElementById('fTime').value;
+    const instr  = document.getElementById('fInstrument').value;
+    const entry  = parseFloat(document.getElementById('fEntry').value) || 0;
+    const exit   = parseFloat(document.getElementById('fExit').value)  || 0;
+    const stop   = parseFloat(document.getElementById('fStop').value)  || 0;
+    const pnl    = parseFloat(document.getElementById('fPnL').value)   || 0;
+    const qual   = document.getElementById('fQuality').value;
+    const notes  = document.getElementById('fNotes').value;
+    const imgSrc = document.getElementById('imgPreview').src;
+    const hasImg = document.getElementById('imgPreview').style.display === 'block';
+
+    if (!date) { alert('Please enter a date.'); return; }
+
+    const trade = {
+      id:        Date.now(),
+      date, time, instr,
+      direction, result,
+      entry, exit, stop, pnl,
+      quality: qual,
+      notes,
+      image: hasImg ? imgSrc : null
+    };
+
+    trades.unshift(trade);
+    save();
+    renderAll();
+    resetForm();
+  }
+
+  function resetForm() {
+    document.getElementById('fEntry').value = '';
+    document.getElementById('fExit').value  = '';
+    document.getElementById('fStop').value  = '';
+    document.getElementById('fPnL').value   = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('imgPreview').style.display = 'none';
+    document.getElementById('imgPreview').src = '';
+    document.getElementById('fImg').value   = '';
+    setDir('long');
+    setResult('win');
+  }
+
+  // ── DELETE ──
+  function deleteTrade(id) {
+    if (!confirm('Delete this trade?')) return;
+    trades = trades.filter(t => t.id !== id);
+    save();
+    renderAll();
+  }
+
+  // ── SAVE ──
+  function save() {
+    const slim = trades.map(t => ({...t}));
+    try {
+      localStorage.setItem('rp_trades', JSON.stringify(slim));
+    } catch(e) {
+      const noImg = slim.map(t => ({...t, image: null}));
+      localStorage.setItem('rp_trades', JSON.stringify(noImg));
+    }
+  }
+
+  // ── FILTER ──
+  function setFilter(f, btn) {
+    filter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderList();
+  }
+
+  // ── STATS ──
+  function updateStats() {
+    const real   = trades.filter(t => t.quality !== 'skip');
+    const total  = real.length;
+    const wins   = real.filter(t => t.result === 'win').length;
+    const losses = real.filter(t => t.result === 'loss').length;
+    const wr     = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const netPnL = real.reduce((sum, t) => sum + (t.pnl || 0), 0);
+
+    // Streak
+    let streak = 0, streakType = '';
+    for (let t of real) {
+      if (streak === 0) { streak = 1; streakType = t.result; }
+      else if (t.result === streakType) streak++;
+      else break;
+    }
+    const streakStr = streak > 0
+      ? (streakType === 'win' ? '+' : streakType === 'loss' ? '-' : '±') + streak
+      : '—';
+
+    document.getElementById('statWR').textContent    = wr + '%';
+    document.getElementById('statWR').className      = 'stat-value ' + (wr >= 50 ? 'green' : 'red');
+    document.getElementById('wrBar').style.width     = wr + '%';
+    document.getElementById('statTotal').textContent  = total;
+    document.getElementById('statWL').textContent     = wins + ' / ' + losses;
+    document.getElementById('statPnL').textContent    = (netPnL >= 0 ? '+' : '') + '$' + netPnL.toFixed(2);
+    document.getElementById('statPnL').className      = 'stat-value ' + (netPnL >= 0 ? 'green' : 'red');
+    document.getElementById('statStreak').textContent = streakStr;
+    document.getElementById('tradeCount').textContent = trades.length + ' trade' + (trades.length !== 1 ? 's' : '') + ' logged';
+  }
+
+  // ── RENDER LIST ──
+  function renderList() {
+    const list = document.getElementById('tradeList');
+    let filtered = trades;
+
+    if (filter === 'win')   filtered = trades.filter(t => t.result === 'win');
+    if (filter === 'loss')  filtered = trades.filter(t => t.result === 'loss');
+    if (filter === 'long')  filtered = trades.filter(t => t.direction === 'long');
+    if (filter === 'short') filtered = trades.filter(t => t.direction === 'short');
+
+    if (filtered.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-text">${trades.length === 0 ? 'No trades logged yet.<br>Add your first trade on the left.' : 'No trades match this filter.'}</div>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(t => {
+      const pnlStr  = (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl).toFixed(2);
+      const imgHtml = t.image
+        ? `<img class="trade-image" src="${t.image}" alt="Chart" onclick="openLightbox('${t.image}')">`
+        : '';
+      const notesHtml = t.notes
+        ? `<div class="trade-notes">"${t.notes}"</div>`
+        : '';
+      const qualLabel = {A:'A+ SETUP', B:'B SETUP', C:'C SETUP', skip:'SKIP DAY'}[t.quality] || '';
+
+      return `
+      <div class="trade-card ${t.result}" id="card-${t.id}">
+        <div class="card-top" onclick="toggleCard(${t.id})">
+          <div class="card-badge ${t.direction}">${t.direction === 'long' ? '▲ LONG' : '▼ SHORT'}</div>
+          <div class="card-meta">
+            <div class="card-date">${t.date} · ${t.time || ''} CT · ${t.instr}</div>
+            <div class="card-instrument">${qualLabel}</div>
+          </div>
+          <div class="card-pnl ${t.result}">${t.result === 'be' ? 'B/E' : pnlStr}</div>
+          <div class="card-result ${t.result}">${t.result.toUpperCase()}</div>
+        </div>
+        <div class="card-detail" id="detail-${t.id}">
+          ${imgHtml}
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Entry</label>
+              <div class="val">${t.entry || '—'}</div>
+            </div>
+            <div class="detail-item">
+              <label>Exit</label>
+              <div class="val">${t.exit || '—'}</div>
+            </div>
+            <div class="detail-item">
+              <label>Stop Loss</label>
+              <div class="val">${t.stop || '—'}</div>
+            </div>
+            <div class="detail-item">
+              <label>P&L</label>
+              <div class="val" style="color:${t.result==='win'?'var(--green)':t.result==='loss'?'var(--red)':'var(--gold)'}">${pnlStr}</div>
+            </div>
+          </div>
+          ${notesHtml}
+          <button class="delete-btn" onclick="deleteTrade(${t.id})">✕ DELETE TRADE</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAll() {
+    updateStats();
+    renderList();
+  }
+
+  // ── EXPAND CARD ──
+  function toggleCard(id) {
+    const detail = document.getElementById('detail-' + id);
+    detail.classList.toggle('open');
+  }
+
+  // ── LIGHTBOX ──
+  function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').classList.add('open');
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+</script>
+</body>
+</html>
